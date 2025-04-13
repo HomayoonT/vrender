@@ -54,11 +54,22 @@ if [ -z "$NGROK_URL" ]; then
   cat ngrok.log
 fi
 
-echo "🌐 Starting dummy HTTP server on port 8080 to keep container alive..."
-# Serve a simple static HTML page so Koyeb detects active HTTP port
-echo "<h1>VNC server is running via ngrok TCP tunnel</h1><p>VNC URL: $NGROK_URL</p>" > /index.html
-cd /
-python3 -m http.server 8080 --bind 0.0.0.0 &
+# Start a dummy TCP server on port 8000 for Koyeb health check
+echo "🌐 Starting dummy TCP server on port 8000 to satisfy health check..."
+cat << EOF > /tcp_server.py
+import socket
+
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.bind(('0.0.0.0', 8000))
+server_socket.listen(5)
+print("TCP keepalive server running on port 8000...")
+while True:
+    client_socket, addr = server_socket.accept()
+    client_socket.close()
+EOF
+
+python3 /tcp_server.py &
+TCP_SERVER_PID=$!
 
 # Final keep-alive
 echo "✅ All services started. Container will stay alive."
