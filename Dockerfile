@@ -38,6 +38,6 @@ RUN chmod +x /entrypoint.sh
 
 # Expose the VNC port (5900) so that Render.com and/or your VNC client can target it
 EXPOSE 5900
-
+EXPOSE 8000
 # Run the entrypoint script when the container starts
 ENTRYPOINT ["/entrypoint.sh"]
