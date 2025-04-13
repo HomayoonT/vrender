@@ -16,9 +16,11 @@ if [ -z "$VNC_PASSWORD" ]; then
   VNC_PASSWORD="secret"
 fi
 
+# Create a directory for VNC password file
+mkdir -p "$HOME/.vnc"
 echo "🔧 Setting up x11vnc server..."
-x11vnc -storepasswd "$VNC_PASSWORD" /tmp/passwd
-x11vnc -forever -rfbauth /tmp/passwd -display :1 -shared -bg
+x11vnc -storepasswd "$VNC_PASSWORD" "$HOME/.vnc/passwd"
+x11vnc -forever -rfbauth "$HOME/.vnc/passwd" -display :1 -shared -bg
 sleep 1
 
 # Check ngrok auth token
@@ -27,11 +29,14 @@ if [ -z "$NGROK_AUTH_TOKEN" ]; then
   exit 1
 fi
 
+# Create ngrok config directory
+mkdir -p "$HOME/.ngrok2"
+
 echo "🔧 Configuring ngrok tunnel..."
 ngrok config add-authtoken "$NGROK_AUTH_TOKEN"
 
 # Start ngrok TCP tunnel for port 5900
-ngrok tcp 5900 --log=stdout > /tmp/ngrok.log &
+ngrok tcp 5900 --log=stdout > "$HOME/ngrok.log" &
 sleep 3
 
 echo "⏳ Waiting for ngrok tunnel to establish..."
@@ -49,13 +54,13 @@ done
 
 if [ -z "$NGROK_URL" ]; then
   echo "❌ Failed to establish ngrok tunnel. Logs:"
-  cat /tmp/ngrok.log
+  cat "$HOME/ngrok.log"
   exit 1
 fi
 
 # Start dummy TCP server on port 8000 in the foreground
 echo "🌐 Starting dummy TCP server on port 8000 to satisfy health check..."
-cat << 'EOF' > /tcp_server.py
+cat << 'EOF' > "$HOME/tcp_server.py"
 import socket
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -69,4 +74,4 @@ EOF
 
 # Run dummy TCP server in foreground (as PID 1)
 echo "✅ All services started. Container will stay alive via TCP health check on port 8000."
-exec python3 /tcp_server.py
+exec python3 "$HOME/tcp_server.py"
