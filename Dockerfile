@@ -16,7 +16,8 @@ RUN apt-get update && \
       unzip \
       python3-pip \
       xfce4 \
-      xfce4-goodies && \
+      xfce4-goodies \
+      passwd && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Google Chrome
@@ -32,6 +33,9 @@ RUN curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | tee /etc/apt/truste
     apt-get install -y ngrok && \
     rm -rf /var/lib/apt/lists/*
 
+# Create user 'andrew' with password 'test'
+RUN useradd -m andrew && echo "andrew:test" | chpasswd && adduser andrew sudo
+
 # Copy the entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
@@ -39,5 +43,9 @@ RUN chmod +x /entrypoint.sh
 # Expose the VNC port (5900) so that Render.com and/or your VNC client can target it
 EXPOSE 5900
 EXPOSE 8000
+
+# Set default user
+USER andrew
+
 # Run the entrypoint script when the container starts
 ENTRYPOINT ["/entrypoint.sh"]
