@@ -4,7 +4,6 @@ set -e
 echo "🔧 Starting Xvfb on display :1..."
 Xvfb :1 -screen 0 1024x768x16 &
 export DISPLAY=:1
-
 sleep 2
 
 echo "🔧 Starting the Xfce desktop environment..."
@@ -20,7 +19,6 @@ fi
 echo "🔧 Setting up x11vnc server..."
 x11vnc -storepasswd "$VNC_PASSWORD" /tmp/passwd
 x11vnc -forever -rfbauth /tmp/passwd -display :1 -shared -bg
-
 sleep 1
 
 # Check ngrok auth token
@@ -33,7 +31,7 @@ echo "🔧 Configuring ngrok tunnel..."
 ngrok config add-authtoken "$NGROK_AUTH_TOKEN"
 
 # Start ngrok TCP tunnel for port 5900
-ngrok tcp 5900 --log=stdout > ngrok.log &
+ngrok tcp 5900 --log=stdout > /tmp/ngrok.log &
 sleep 3
 
 echo "⏳ Waiting for ngrok tunnel to establish..."
@@ -51,26 +49,24 @@ done
 
 if [ -z "$NGROK_URL" ]; then
   echo "❌ Failed to establish ngrok tunnel. Logs:"
-  cat ngrok.log
+  cat /tmp/ngrok.log
+  exit 1
 fi
 
-# Start a dummy TCP server on port 8000 for Koyeb health check
+# Start dummy TCP server on port 8000 in the foreground
 echo "🌐 Starting dummy TCP server on port 8000 to satisfy health check..."
-cat << EOF > /tcp_server.py
+cat << 'EOF' > /tcp_server.py
 import socket
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.bind(('0.0.0.0', 8000))
 server_socket.listen(5)
-print("TCP keepalive server running on port 8000...")
+print("✅ TCP keepalive server running on port 8000...")
 while True:
     client_socket, addr = server_socket.accept()
     client_socket.close()
 EOF
 
-python3 /tcp_server.py &
-TCP_SERVER_PID=$!
-
-# Final keep-alive
-echo "✅ All services started. Container will stay alive."
-tail -f /dev/null
+# Run dummy TCP server in foreground (as PID 1)
+echo "✅ All services started. Container will stay alive via TCP health check on port 8000."
+exec python3 /tcp_server.py
