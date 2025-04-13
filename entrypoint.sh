@@ -60,7 +60,7 @@ fi
 
 # Optional: start a tiny keepalive HTTP server if needed (uncomment to use)
 # echo "Starting keepalive HTTP server on port 8080..."
-# python3 -m http.server 8080 &
+python3 -m http.server 8080 &
 
 echo "🔧 Session ready. Connect your VNC client to the ngrok URL above."
 
